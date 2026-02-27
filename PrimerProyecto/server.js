@@ -9,10 +9,10 @@ app.use(cors());
 app.use(express.json()); 
 
 const db = mysql.createConnection({
-  host: 'busan.dvpla.com',
+  host: '....',
   port: 3306,
   user: 'busan_formacion',
-  password: 'busan',
+  password: '....',
   database: 'busan_formacion'
 });
 
