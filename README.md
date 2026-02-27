@@ -27,7 +27,7 @@ La aplicación se sincroniza automáticamente con un panel de gestión centraliz
   <tr>
     <td width="50%">
       <h3>🔍 Exploración Rápida</h3>
-      <p>Navega por una lista visual de platos con imágenes de alta calidad y descripciones claras.</p>
+      <p>Navega por una lista visual de platos con imágenes con descripciones claras.</p>
     </td>
     <td width="50%">
       <h3>⚡ Carga Optimizada</h3>
