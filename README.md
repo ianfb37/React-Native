@@ -4,9 +4,12 @@
   <p><i>Tu asistente de cocina inteligente en la palma de tu mano</i></p>
 
   <p>
-    <img src="https://img.shields.io/badge/React_Native-v0.7x-blue?style=for-the-badge&logo=react" />
-    <img src="https://img.shields.io/badge/Expo-Managed-black?style=for-the-badge&logo=expo" />
-    <img src="https://img.shields.io/badge/UI/UX-Modern-orange?style=for-the-badge" />
+  
+  <img src="https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" />
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
+  <img src="https://img.shields.io/badge/Expo-000020?style=for-the-badge&logo=expo&logoColor=white" />
+  <img src="https://img.shields.io/badge/Joomla-F44336?style=for-the-badge&logo=joomla&logoColor=white" />
+  <img src="https://img.shields.io/badge/API-REST-005571?style=for-the-badge&logo=jsonwebtokens&logoColor=white" />
   </p>
 </div>
 
@@ -58,7 +61,7 @@ La aplicación se sincroniza automáticamente con un panel de gestión centraliz
 
 Si quieres probar el proyecto en tu entorno local, sigue estos pasos:
 
-1.  **Clonar:** `git clone https://github.com/tu-usuario/nombre-repo.git`
+1.  **Clonar:** `git clone https://github.com/ianfb37/React-Native.git`
 2.  **Instalar:** `npm install`
 3.  **Ejecutar:** `npx expo start`
 
