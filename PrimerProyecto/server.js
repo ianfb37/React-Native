@@ -29,8 +29,8 @@ const db = mysql.createConnection({
 });
 
 db.connect(err => {
-  if (err) { console.error('❌ Error BD:', err.message); return; }
-  console.log('✅ Conectado a la BD');
+  if (err) { console.error(' Error BD:', err.message); return; }
+  console.log(' Conectado a la BD');
 });
 
 // --- RUTA DE LOGIN (Actualizada para guardar ID) ---
@@ -47,7 +47,7 @@ app.get('/api/usuarios', (req, res) => {
         
         // GUARDAR ID EN LA MEMORIA DEL PC
         ultimoIdLogueado = usuario.id;
-        console.log(`💻 PC RECORDANDO USUARIO ID: ${ultimoIdLogueado}`);
+        console.log(` PC RECORDANDO USUARIO ID: ${ultimoIdLogueado}`);
 
         res.json({ 
           success: true, 
@@ -66,7 +66,7 @@ app.get('/api/usuarios', (req, res) => {
 // --- RUTA PARA OBTENER CONTACTOS (Excluyéndote a ti mismo) ---
 app.get('/api/mis-contactos', (req, res) => {
   if (!ultimoIdLogueado) {
-    console.log("⚠️ Intento de acceso sin login previo en el PC");
+    console.log("Intento de acceso sin login previo en el PC");
     return res.status(401).json({ error: 'No hay sesión activa en el PC' });
   }
 
