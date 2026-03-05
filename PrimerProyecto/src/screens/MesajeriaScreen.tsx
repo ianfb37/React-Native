@@ -44,17 +44,9 @@ export default function MesajeriaScreen() {
         const data = await response.json();
 
         if (response.ok) {
-          // El servidor nos devuelve la lista de contactos (donde ya filtró nuestro ID)
           setContactos(data);
           
-          // Para saber "mi propio ID", podemos deducirlo o simplemente 
-          // confiar en que el servidor ya sabe quiénes somos para los mensajes.
-          // Como tu tabla de mensajes necesita id_emisor, vamos a pedirle al servidor 
-          // que nos diga también nuestro ID (esto se hace automáticamente al loguear en el PC).
-          
-          // NOTA: Para que el envío de mensajes funcione, necesitamos saber nuestro ID.
-          // Vamos a asumir que el servidor nos lo da o lo tenemos identificado.
-          // Si el login fue exitoso, el PC ya tiene el 'ultimoIdLogueado'.
+         
         } else {
           console.log("Error: El PC no recuerda ninguna sesión activa.");
         }
@@ -74,9 +66,6 @@ export default function MesajeriaScreen() {
     
     if (chatActivo) {
       const traerMensajes = () => {
-        // Usamos una ruta especial o pasamos un flag para que el PC use su 'ultimoIdLogueado'
-        // Para simplificar, tu ruta actual es /mensajes/:receptor/:emisor
-        // Pero como el ID está en el PC, lo ideal es que el PC maneje esto.
         fetch(`${API_URL}/mensajes/${chatActivo.id}/sesion-pc`) 
           .then(res => res.json())
           .then((data: Mensaje[]) => setMensajes(data))
@@ -94,7 +83,6 @@ export default function MesajeriaScreen() {
     if (!texto.trim() || !chatActivo) return;
 
     const body = {
-      // Enviamos un flag o el ID 0 para que el servidor use 'ultimoIdLogueado'
       id_emisor: 'auto', 
       id_receptor: chatActivo.id,
       contenido: texto,
