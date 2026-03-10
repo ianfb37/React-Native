@@ -1,64 +1,50 @@
-<div align="center">
-  <img src="https://img.icons8.com/fluency/96/000000/layers.png" width="100" />
-  <h1>📱 Mobile Development Hub</h1>
-  <p><i>Colección de aplicaciones modulares construidas con tecnologías de vanguardia</i></p>
+# Welcome to your Expo app 👋
 
-  <p>
-    <img src="https://img.shields.io/badge/React_Native-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" />
-    <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
-    <img src="https://img.shields.io/badge/Expo-000020?style=for-the-badge&logo=expo&logoColor=white" />
-    <img src="https://img.shields.io/badge/Joomla-F44336?style=for-the-badge&logo=joomla&logoColor=white" />
-    <img src="https://img.shields.io/badge/API-REST-005571?style=for-the-badge&logo=jsonwebtokens&logoColor=white" />
-  </p>
-</div>
+This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
----
+## Get started
 
-## 🚀 Sobre este Repositorio
+1. Install dependencies
 
-Este espacio está dedicado al desarrollo de aplicaciones móviles multiplataforma. El objetivo es crear una estructura escalable donde se integran diferentes módulos (como gestión de contenidos, utilidades y servicios) utilizando un stack tecnológico moderno y eficiente.
+   ```bash
+   npm install
+   ```
 
-## 🛠️ Stack Tecnológico Explicado
+2. Start the app
 
-Para entender cómo funciona este proyecto, es importante conocer las piezas clave que lo componen:
+   ```bash
+   npx expo start
+   ```
 
-### ⚛️ React Native + Expo
-**React Native** es un framework que permite escribir código en JavaScript/TypeScript para crear aplicaciones **nativas** (no son simples webs móviles). 
-- **Expo:** Es una capa de herramientas sobre React Native que acelera el desarrollo, facilitando el acceso a la cámara, notificaciones y, sobre todo, permitiendo probar la app en tiempo real sin necesidad de cables.
+In the output, you'll find options to open the app in a
 
-### 📘 TypeScript & TSX
-Este proyecto utiliza **TypeScript**, un lenguaje que añade "tipado" a JavaScript.
-- **¿Qué es TSX?** Es la extensión de archivo que combina la lógica de TypeScript con la sintaxis de **JSX** (la forma en que React dibuja la interfaz). Esto nos permite detectar errores antes de ejecutar la app y escribir un código mucho más limpio y profesional.
+- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
+- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
+- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
+- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
 
-### 🌐 Integración con Joomla & API REST
-A diferencia de las apps estáticas, este proyecto consume datos de forma dinámica:
-- **Joomla:** Actúa como nuestro CMS (Gestor de Contenidos) donde se administra la información de forma centralizada.
-- **API REST:** Es el puente de comunicación. La app solicita datos al servidor y este responde en formato JSON, permitiendo actualizaciones instantáneas sin cambiar el código de la aplicación.
+You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
-## 📂 Proyectos Incluidos
+## Get a fresh project
 
-Actualmente, el repositorio contiene:
-*   **Módulo de Contenidos Dinámicos:** Visualización de elementos (imágenes y textos) sincronizados con el servidor remoto.
-*   *(Próximamente más módulos...)*
+When you're ready, run:
 
-## ⚙️ Instalación Rápida
+```bash
+npm run reset-project
+```
 
-1.  **Clonar el repositorio:**
-    ```bash
-    git clone https://github.com/ianfb37/React-Native.git
-    ```
-2.  **Instalar dependencias:**
-    ```bash
-    npm install
-    ```
-3.  **Lanzar entorno de desarrollo:**
-    ```bash
-    npx expo start
-    ```
+This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
 
----
+## Learn more
 
-<div align="center">
-  <p>Explorando los límites del desarrollo móvil multiplataforma.</p>
-  <img src="https://img.icons8.com/color/48/000000/code.png" width="20" />
-</div>
+To learn more about developing your project with Expo, look at the following resources:
+
+- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
+- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+
+## Join the community
+
+Join our community of developers creating universal apps.
+
+- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
+- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
