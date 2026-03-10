@@ -5,19 +5,24 @@ const multer = require('multer');
 const path = require('path');
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
+
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// --- VARIABLE GLOBAL EN TU PC ---
-// Esta variable guardará quién eres tú después de hacer login
 let ultimoIdLogueado = null; 
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => { cb(null, 'uploads/'); },
-  filename: (req, file, cb) => { cb(null, Date.now() + path.extname(file.originalname)); }
+  destination: (req, file, cb) => { 
+    cb(null, 'uploads/'); 
+  },
+  filename: (req, file, cb) => { 
+    cb(null, Date.now() + path.extname(file.originalname)); 
+  }
 });
+
 const upload = multer({ storage: storage });
 
 const db = mysql.createConnection({
@@ -29,11 +34,13 @@ const db = mysql.createConnection({
 });
 
 db.connect(err => {
-  if (err) { console.error(' Error BD:', err.message); return; }
-  console.log(' Conectado a la BD');
+  if (err) { 
+    console.error(err.message); 
+    return; 
+  }
+  console.log('Conectado');
 });
 
-// --- RUTA DE LOGIN (Actualizada para guardar ID) ---
 app.get('/api/usuarios', (req, res) => {
   const { nombre, contraseña } = req.query;
   const sql = 'SELECT * FROM mw208_RecetasUsuarios WHERE nombre = ?'; 
@@ -43,16 +50,14 @@ app.get('/api/usuarios', (req, res) => {
 
     if (results.length > 0) {
       const usuario = results[0];
-      if (usuario.contraseña === contraseña) {
-        
-        // GUARDAR ID EN LA MEMORIA DEL PC
-        ultimoIdLogueado = usuario.id;
-        console.log(` PC RECORDANDO USUARIO ID: ${ultimoIdLogueado}`);
 
+      if (usuario.contraseña === contraseña) {
+        ultimoIdLogueado = usuario.id;
         res.json({ 
           success: true, 
           id: usuario.id,      
-          usuario: usuario.nombre 
+          usuario: usuario.nombre,
+          imagen: usuario.imagen 
         });
       } else {
         res.status(401).json({ error: 'Contraseña incorrecta' });
@@ -63,31 +68,49 @@ app.get('/api/usuarios', (req, res) => {
   });
 });
 
-// --- RUTA PARA OBTENER CONTACTOS (Excluyéndote a ti mismo) ---
-app.get('/api/mis-contactos', (req, res) => {
-  if (!ultimoIdLogueado) {
-    console.log("Intento de acceso sin login previo en el PC");
-    return res.status(401).json({ error: 'No hay sesión activa en el PC' });
+app.post('/api/usuarios', upload.single('imagen'), (req, res) => {
+  const { nombre, password } = req.body;
+  
+  if (!nombre || !password) {
+    return res.status(400).json({ 
+      error: 'Faltan datos',
+      recibido: req.body 
+    });
   }
 
-  console.log(`🔍 Buscando contactos para el ID guardado en PC: ${ultimoIdLogueado}`);
-  const sql = 'SELECT id, nombre FROM mw208_RecetasUsuarios WHERE id != ?';
+  const rutaImagen = req.file 
+    ? `/uploads/${req.file.filename}` 
+    : '/assets/default.jpg'; 
+
+  const sql = 'INSERT INTO mw208_RecetasUsuarios (nombre, contraseña, imagen) VALUES (?, ?, ?)';
   
+  db.query(sql, [nombre, password, rutaImagen], (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    
+    res.json({ 
+      success: true,
+      id: results.insertId,
+      imagen: rutaImagen 
+    });
+  });
+});
+
+app.get('/api/mis-contactos', (req, res) => {
+  if (!ultimoIdLogueado) return res.status(401).json({ error: 'No hay sesión' });
+
+  const sql = 'SELECT id, nombre, imagen FROM mw208_RecetasUsuarios WHERE id != ?';
   db.query(sql, [ultimoIdLogueado], (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(results);
   });
 });
 
-// --- NUEVA RUTA: TRAER MENSAJES DEL CHAT ---
 app.get('/api/mensajes/:otroUsuarioId/sesion-pc', (req, res) => {
     const otroUsuarioId = req.params.otroUsuarioId;
+    if (!ultimoIdLogueado) return res.status(401).json({ error: 'No hay sesión' });
   
-    if (!ultimoIdLogueado) {
-      return res.status(401).json({ error: 'No hay sesión activa en el PC' });
-    }
-  
-    // Buscamos mensajes entre el usuario logueado en el PC y el contacto seleccionado
     const sql = `
       SELECT * FROM mw208_RecetasMensajes 
       WHERE (id_emisor = ? AND id_receptor = ?) 
@@ -99,47 +122,43 @@ app.get('/api/mensajes/:otroUsuarioId/sesion-pc', (req, res) => {
       if (err) return res.status(500).json({ error: err.message });
       res.json(results);
     });
-  });
+});
 
-// --- RUTA PARA ENVIAR MENSAJES (Actualizada) ---
 app.post('/api/mensajes', (req, res) => {
   let { id_emisor, id_receptor, contenido, tipo, id_referencia } = req.body || {};
-
-  // Si el móvil envía "auto" o no envía nada, usamos el ID que guardó el servidor
-  if (id_emisor === 'auto' || !id_emisor) {
-    id_emisor = ultimoIdLogueado;
-  }
-
-  if (!id_emisor) {
-    return res.status(401).json({ error: 'El servidor no sabe quién eres (ID no encontrado en PC)' });
-  }
+  if (id_emisor === 'auto' || !id_emisor) id_emisor = ultimoIdLogueado;
 
   const sql = 'INSERT INTO mw208_RecetasMensajes (id_emisor, id_receptor, contenido, tipo, id_referencia) VALUES (?, ?, ?, ?, ?)';
   db.query(sql, [id_emisor, id_receptor, contenido, tipo, id_referencia], (err, result) => {
     if (err) return res.status(500).json({ error: err.message });
-    res.json({ success: true, message: 'Mensaje enviado', id: result.insertId });
+    res.json({ success: true, id: result.insertId });
   });
 });
 
-// --- OTRAS RUTAS ---
-
-app.post('/api/usuarios', (req, res) => {
-  const { nombre, contraseña } = req.body || {};
-  if (!nombre || !contraseña) return res.status(400).json({ error: 'Faltan datos' });
-  const sql = 'INSERT INTO mw208_RecetasUsuarios (nombre, contraseña) VALUES (?, ?)';
-  db.query(sql, [nombre, contraseña], (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ message: 'Usuario creado', id: results.insertId });
-  });
-});
 app.get('/api/recetas', (req, res) => {
   db.query('SELECT * FROM mw208_Recetas', (err, results) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(results);
   });
 });
+app.get('/api/usuarios/perfil-actual', (req, res) => {
+  if (!ultimoIdLogueado) {
+    return res.status(404).json({ success: false, error: 'No hay sesión' });
+  }
 
-const PORT = 3000;
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
+  const sql = 'SELECT nombre, imagen FROM mw208_RecetasUsuarios WHERE id = ?';
+  db.query(sql, [ultimoIdLogueado], (err, results) => {
+    if (err || results.length === 0) return res.status(500).json({ success: false });
+    
+    res.json({
+      success: true,
+      nombre: results[0].nombre,
+      imagen: results[0].imagen
+    });
+  });
 });
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Puerto ${PORT}`);
+});v
