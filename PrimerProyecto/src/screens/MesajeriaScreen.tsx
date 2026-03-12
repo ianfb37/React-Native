@@ -6,7 +6,8 @@ import {
   StyleSheet,
   Text,
   TextInput, TouchableOpacity,
-  View
+  View,
+  Alert
 } from 'react-native';
 
 interface Contacto {
@@ -19,15 +20,13 @@ interface Mensaje {
   id_emisor: number;
   id_receptor: number;
   contenido: string;
-  tipo: string;
   fecha_envio?: string;
 }
 
-const API_URL = 'http://192.168.0.132:3000/api'; 
+// URL base de tu API PHP
+const API_URL = `https://busan.dvpla.com/server_api`; 
 
 export default function MesajeriaScreen() {
-  // Estados principales
-  const [miId, setMiId] = useState<number | null>(null);
   const [cargando, setCargando] = useState(true);
   const [chatActivo, setChatActivo] = useState<Contacto | null>(null);
   const [contactos, setContactos] = useState<Contacto[]>([]);
@@ -35,38 +34,34 @@ export default function MesajeriaScreen() {
   const [texto, setTexto] = useState<string>('');
   const flatListRef = useRef<FlatList>(null);
 
-  // 1. PREGUNTAR AL PC: "¿Quién soy?" y cargar contactos
+  // 1. CARGAR CONTACTOS
   useEffect(() => {
-    const cargarDatosDesdePC = async () => {
+    const cargarContactos = async () => {
       try {
-        // Llamamos a la nueva ruta que creamos en el servidor del PC
-        const response = await fetch(`${API_URL}/mis-contactos`);
+        // Llamamos al PHP con un parámetro para que sepa que queremos la lista
+        const response = await fetch(`${API_URL}/mensajes.php?modo=contactos`);
         const data = await response.json();
 
         if (response.ok) {
           setContactos(data);
-          
-         
-        } else {
-          console.log("Error: El PC no recuerda ninguna sesión activa.");
         }
       } catch (e) {
-        console.error('Error conectando con el PC:', e);
+        console.error('Error conectando con PHP:', e);
       } finally {
         setCargando(false);
       }
     };
 
-    cargarDatosDesdePC();
+    cargarContactos();
   }, []);
 
-  // 2. CARGAR MENSAJES (Cuando entramos en un chat)
+  // 2. CARGAR MENSAJES (Polling cada 3 segundos)
   useEffect(() => {
     let intervalo: ReturnType<typeof setInterval> | undefined;
     
     if (chatActivo) {
       const traerMensajes = () => {
-        fetch(`${API_URL}/mensajes/${chatActivo.id}/sesion-pc`) 
+        fetch(`${API_URL}/mensajes.php?receptor=${chatActivo.id}`) 
           .then(res => res.json())
           .then((data: Mensaje[]) => setMensajes(data))
           .catch(e => console.log("Error mensajes:", e));
@@ -79,33 +74,35 @@ export default function MesajeriaScreen() {
     return () => { if (intervalo) clearInterval(intervalo); };
   }, [chatActivo]);
 
+  // 3. ENVIAR MENSAJE
   const enviar = () => {
     if (!texto.trim() || !chatActivo) return;
 
     const body = {
-      id_emisor: 'auto', 
       id_receptor: chatActivo.id,
-      contenido: texto,
-      tipo: 'texto',
-      id_referencia: null
+      contenido: texto
     };
 
-    fetch(`${API_URL}/mensajes`, {
+    fetch(`${API_URL}/mensajes.php`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     })
-    .then(() => {
-      setTexto('');
-      // Recargar tras enviar
-    });
+    .then(res => res.json())
+    .then((data) => {
+      if (data.success) {
+        setTexto('');
+        // Opcional: podrías volver a cargar mensajes aquí
+      }
+    })
+    .catch(e => Alert.alert("Error", "No se pudo enviar el mensaje"));
   };
 
   if (cargando) {
     return (
       <View style={styles.centrado}>
         <ActivityIndicator size="large" color="#007AFF" />
-        <Text>Conectando con el PC...</Text>
+        <Text>Cargando contactos...</Text>
       </View>
     );
   }
@@ -115,8 +112,8 @@ export default function MesajeriaScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.headerSimple}>
-          <Text style={styles.titulo}>Mensajería PC</Text>
-          <Text style={styles.subtitulo}>Sesión gestionada por el servidor</Text>
+          <Text style={styles.titulo}>Mensajería</Text>
+          <Text style={styles.subtitulo}>Selecciona un contacto para chatear</Text>
         </View>
         <FlatList
           data={contactos}
@@ -127,7 +124,7 @@ export default function MesajeriaScreen() {
               <Text style={styles.nombre}>{item.nombre}</Text>
             </TouchableOpacity>
           )}
-          ListEmptyComponent={<Text style={styles.vacio}>No se encontraron otros usuarios</Text>}
+          ListEmptyComponent={<Text style={styles.vacio}>No hay usuarios registrados</Text>}
         />
       </SafeAreaView>
     );
@@ -146,11 +143,11 @@ export default function MesajeriaScreen() {
       <FlatList
         ref={flatListRef}
         data={mensajes}
-        keyExtractor={item => item.id.toString()}
+        keyExtractor={(item, index) => item.id?.toString() || index.toString()}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
         renderItem={({item}) => {
-            // Aquí el servidor debería decirnos si el mensaje es nuestro o no
-            const esMio = item.id_emisor !== chatActivo.id; 
+            // Asumimos que el ID del emisor soy yo (1)
+            const esMio = item.id_emisor === 1; 
             return (
                 <View style={[styles.msg, esMio ? styles.msgDerecha : styles.msgIzquierda]}>
                     <Text style={esMio ? {color:'white'} : {color:'black'}}>{item.contenido}</Text>
@@ -181,7 +178,7 @@ const styles = StyleSheet.create({
   centrado: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   headerSimple: { padding: 20, backgroundColor: 'white', borderBottomWidth: 1, borderColor: '#DDD', paddingTop: 50 },
   titulo: { fontSize: 24, fontWeight: 'bold', color: '#333' },
-  subtitulo: { fontSize: 12, color: '#666' },
+  subtitulo: { fontSize: 14, color: '#666' },
   item: { flexDirection: 'row', alignItems: 'center', padding: 15, backgroundColor: 'white', marginBottom: 1 },
   avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#007AFF', justifyContent: 'center', alignItems: 'center', marginRight: 15 },
   nombre: { fontSize: 16, fontWeight: '500' },

@@ -24,7 +24,8 @@ export default function SettingsScreen() {
   });
 
   // IP de tu servidor
-  const BASE_URL = "http://192.168.0.132:3000";
+  const BASE_URL =`https://busan.dvpla.com`; 
+
 
   useEffect(() => {
     fetch(`${BASE_URL}/api/usuarios/perfil-actual`)

@@ -23,10 +23,16 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "bundler": "metro"
     },
     "plugins": [
-      "expo-router",
+      [
+        "expo-router",
+        {
+          "origin": "https://busan.dvpla.com/dist/"
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -42,10 +48,13 @@
     ],
     "experiments": {
       "typedRoutes": true,
-      "reactCompiler": true
+      "reactCompiler": false,
+      "baseUrl": "/dist"
     },
     "extra": {
-      "router": {},
+      "router": {
+        "headOrigin": "https://busan.dvpla.com/dist"
+      },
       "eas": {
         "projectId": "cee1e39d-a353-4886-b9a1-6e03c1d0ddb5"
       }

@@ -6,7 +6,8 @@ import { Image, StyleSheet, Text, TouchableOpacity } from 'react-native';
 const queryClient = new QueryClient();
 
 // Cambia esta IP por la de tu PC
-const BASE_URL = "http://192.168.0.132:3000";
+const BASE_URL = `https://busan.dvpla.com`; 
+
 
 const UserHeader = () => {
   const [usuario, setUsuario] = useState<any>(null);
@@ -15,7 +16,8 @@ const UserHeader = () => {
   const cargarUsuario = async () => {
     try {
     
-      const response = await fetch(`${BASE_URL}/api/usuarios/perfil-actual`);
+// FORMA CORRECTA PARA PHP
+const response = await fetch(`${BASE_URL}/server_api/usuarios.php?perfil_actual=true&id_usuario=1`);
       const data = await response.json();
       if (data.success) {
         setUsuario(data);

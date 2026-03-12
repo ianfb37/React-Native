@@ -20,7 +20,7 @@ const IniciarSesionScreen: React.FC<Props> = ({ navigation }) => {
   const [contraseña, setContraseña] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const API_URL = `http://192.168.0.132:3000/api/usuarios`; 
+  const API_URL = `https://busan.dvpla.com/server_api/usuarios.php`; 
 
   const handleIniciarSesionPress = async () => {
     if (!nombre || !contraseña) {

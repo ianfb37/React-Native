@@ -39,8 +39,9 @@ export default function RecetasScreen() {
   const [guardando, setGuardando] = useState(false);
 
   // IP de tu servidor
-  const API_URL = `http://192.168.0.132:3000/api/recetas`; 
-  const ASSETS_URL = `http://192.168.0.132:3000/assets/platos`;
+  const API_URL = `https://busan.dvpla.com/server_api/recetas.php`; 
+
+  const ASSETS_URL = `https://busan.dvpla.com/assets/platos`;
 
   const cargarDatos = async () => {
     try {
@@ -93,7 +94,6 @@ export default function RecetasScreen() {
     formData.append('fecha', new Date().toISOString().split('T')[0]);
 
     if (recetaSeleccionada?.imagen) {
-      // Solo enviamos el archivo si es una URI local (nueva foto)
       if (recetaSeleccionada.imagen.startsWith('file') || recetaSeleccionada.imagen.startsWith('content')) {
         formData.append('foto_receta', {
           uri: recetaSeleccionada.imagen,

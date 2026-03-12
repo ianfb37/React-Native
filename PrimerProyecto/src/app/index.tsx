@@ -7,20 +7,20 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
+  Platform
 } from 'react-native';
 
 const IniciarSesionScreen = () => {
-  const [nombre, setNombre] = useState<string>('');
-  const [contraseña, setContraseña] = useState<string>('');
-  const [cargando, setCargando] = useState<boolean>(false);
+  const [nombre, setNombre] = useState('');
+  const [contraseña, setContraseña] = useState('');
+  const [cargando, setCargando] = useState(false);
   
   const router = useRouter();
 
-  // URL de tu API en Node.js (Asegúrate de que la IP sea la de tu PC)
-  const API_URL = `http://192.168.0.132:3000/api/usuarios`; 
+  // URL apuntando a tu nuevo archivo PHP
+  const API_URL = `https://busan.dvpla.com/server_api/usuarios.php`; 
 
-  // --- FUNCIÓN PARA INICIAR SESIÓN (GET) ---
   const manejarLogin = async () => {
     if (!nombre || !contraseña) {
       Alert.alert('Error', 'Por favor, introduce usuario y contraseña');
@@ -28,30 +28,36 @@ const IniciarSesionScreen = () => {
     }
 
     setCargando(true);
+    
     try {
-      // Al llamar a esta URL, el servidor en tu PC guarda el ID en su variable global
+      // Login vía GET (como espera el PHP)
       const urlConParams = `${API_URL}?nombre=${encodeURIComponent(nombre)}&contraseña=${encodeURIComponent(contraseña)}`;
-      const response = await fetch(urlConParams);
+      
+      console.log("Conectando a PHP:", urlConParams);
+
+      const response = await fetch(urlConParams, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+      });
+
       const data = await response.json();
 
       if (response.ok && data.success) {
-        console.log('✅ Login OK. El PC ahora recuerda al usuario:', data.usuario);
-        
-        // Navegamos a la siguiente pantalla. 
-        // El PC ya sabe quién eres, así que no necesitamos pasar el ID por aquí.
+        console.log('✅ Login OK:', data.usuario);
         router.replace('/botones'); 
       } else {
-        Alert.alert('Error', data.error || 'No se pudo iniciar sesión');
+        Alert.alert('Error', data.error || 'Usuario o contraseña incorrectos');
       }
     } catch (error) {
-      console.error('Error:', error);
-      Alert.alert('Error de conexión', 'No se pudo conectar con el servidor en tu PC.');
+      console.error('Error de red:', error);
+      Alert.alert('Error de conexión', 'No se pudo conectar con el servidor PHP. Revisa que db.php y usuarios.php estén subidos.');
     } finally {
       setCargando(false);
     }
   };
 
-  // --- FUNCIÓN PARA REGISTRO (POST) ---
   const manejarRegistro = async () => {
     if (!nombre || !contraseña) {
       Alert.alert('Error', 'Rellena los campos para crear una cuenta');
@@ -60,21 +66,23 @@ const IniciarSesionScreen = () => {
 
     setCargando(true);
     try {
+      // Registro vía POST enviando JSON
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
+          'Accept': 'application/json',
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           nombre: nombre,
-          contraseña: contraseña,
+          password: contraseña, // El PHP espera 'password'
         }),
       });
 
       const data = await response.json();
 
-      if (response.ok) {
-        Alert.alert('¡Éxito!', 'Usuario registrado. Ahora puedes entrar.');
+      if (response.ok && data.success) {
+        Alert.alert('¡Éxito!', 'Usuario registrado. Ya puedes entrar.');
       } else {
         Alert.alert('Error', data.error || 'No se pudo registrar');
       }
@@ -110,7 +118,7 @@ const IniciarSesionScreen = () => {
       ) : (
         <View style={{ width: '100%' }}>
           <TouchableOpacity style={styles.button} onPress={manejarLogin}>
-            <Text style={styles.buttonText}>Entrar</Text>
+            <Text style={styles.buttonText}>ENTRAR</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
