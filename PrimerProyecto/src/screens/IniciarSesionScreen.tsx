@@ -10,12 +10,17 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { useTheme } from '../app/ThemeContext';
+import { colors } from '../app/colors';
 
 interface Props {
   navigation: any; 
 }
 
 const IniciarSesionScreen: React.FC<Props> = ({ navigation }) => {
+  const { isDarkMode } = useTheme();
+  const currentColors = isDarkMode ? colors.dark : colors.light;
+  
   const [nombre, setNombre] = useState<string>('');
   const [contraseña, setContraseña] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -44,10 +49,10 @@ const IniciarSesionScreen: React.FC<Props> = ({ navigation }) => {
           console.log('--- PROCESO DE GUARDADO ---');
           
           // 1. Guardamos de forma asíncrona pero esperando el resultado
-          await AsyncStorage.setItem('usuarioId', idString);
+          await AsyncStorage.setItem('id_usuario', idString);
           
           // 2. Verificamos que se guardó antes de saltar de pantalla
-          const comprobacion = await AsyncStorage.getItem('usuarioId');
+          const comprobacion = await AsyncStorage.getItem('id_usuario');
           console.log('ID en Storage tras guardar:', comprobacion);
 
           if (comprobacion === idString) {
@@ -99,20 +104,22 @@ const IniciarSesionScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Mi Recetario</Text>
+    <View style={[styles.container, { backgroundColor: currentColors.background }]}>
+      <Text style={[styles.title, { color: currentColors.text }]}>Mi Recetario</Text>
       
       <TextInput 
-        style={styles.input} 
+        style={[styles.input, { backgroundColor: currentColors.card, color: currentColors.text, borderColor: currentColors.border }]} 
         placeholder="Usuario" 
+        placeholderTextColor={currentColors.border}
         value={nombre}
         onChangeText={setNombre}
         autoCapitalize="none"
       />
       
       <TextInput 
-        style={styles.input} 
+        style={[styles.input, { backgroundColor: currentColors.card, color: currentColors.text, borderColor: currentColors.border }]} 
         placeholder="Contraseña" 
+        placeholderTextColor={currentColors.border}
         value={contraseña}
         onChangeText={setContraseña}
         secureTextEntry 
@@ -143,9 +150,9 @@ const IniciarSesionScreen: React.FC<Props> = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20, backgroundColor: '#fffefe' },
-  title: { fontSize: 28, fontWeight: 'bold', marginBottom: 30, color: '#333' },
-  input: { width: '100%', height: 45, borderColor: '#ccc', borderWidth: 1, borderRadius: 5, paddingHorizontal: 10, marginBottom: 15, backgroundColor: '#fff' },
+  container: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 20 },
+  title: { fontSize: 28, fontWeight: 'bold', marginBottom: 30 },
+  input: { width: '100%', height: 45, borderWidth: 1, borderRadius: 5, paddingHorizontal: 10, marginBottom: 15 },
   buttonContainer: { width: '100%', marginTop: 10 },
   registerButton: { alignItems: 'center', padding: 10 },
   registerText: { color: '#007AFF', fontSize: 14, fontWeight: '500' },

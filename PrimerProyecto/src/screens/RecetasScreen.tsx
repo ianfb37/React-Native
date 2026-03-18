@@ -15,6 +15,13 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { useTheme } from '../app/ThemeContext';
+import { colors } from '../app/colors';
+
+interface Alergeno {
+  id: number;
+  nombre: string;
+}
 
 interface Receta {
   id: number;
@@ -25,38 +32,72 @@ interface Receta {
   imagen: string;
   firma: string;
   orden: number;
+  alergenos?: Alergeno[];
 }
 
 export default function RecetasScreen() {
-  
+  const { isDarkMode } = useTheme();
+  const currentColors = isDarkMode ? colors.dark : colors.light;
+
   const [recetas, setRecetas] = useState<Receta[]>([]);
   const [cargando, setCargando] = useState(true);
-
   const [recetaSeleccionada, setRecetaSeleccionada] = useState<Receta | null>(null);
   const [editNombre, setEditNombre] = useState('');
   const [editDescripcion, setEditDescripcion] = useState('');
-  const [editEstado, setEditEstado] = useState(1); 
+  const [editEstado, setEditEstado] = useState(1);
   const [guardando, setGuardando] = useState(false);
+  const [todosLosAlergenos, setTodosLosAlergenos] = useState<Alergeno[]>([]);
+  const [alergenosSeleccionados, setAlergenosSeleccionados] = useState<number[]>([]);
 
-  // IP de tu servidor
-  const API_URL = `https://busan.dvpla.com/server_api/recetas.php`; 
-
-  const ASSETS_URL = `https://busan.dvpla.com/assets/platos`;
+  const API_URL = `https://busan.dvpla.com/server_api/recetas.php`;
+  const ALERGENOS_API = `https://busan.dvpla.com/server_api/alergenos.php`;
+  const ASSETS_URL = `https://busan.dvpla.com/dist/assets/platos`;
 
   const cargarDatos = async () => {
     try {
       const respuesta = await fetch(API_URL);
       const datos = await respuesta.json();
-      setRecetas(datos);
+      
+      const recetasConAlergenos = await Promise.all(
+        datos.map(async (receta: Receta) => {
+          const alergenos = await cargarAlergenosReceta(receta.id);
+          return { ...receta, alergenos };
+        })
+      );
+      
+      setRecetas(recetasConAlergenos);
     } catch (error) {
       console.error("Error cargando recetas:", error);
+      Alert.alert("Error", "No se pudieron cargar las recetas");
     } finally {
       setCargando(false);
     }
   };
 
+  const cargarAlergenosReceta = async (recetaId: number): Promise<Alergeno[]> => {
+    try {
+      const respuesta = await fetch(`${ALERGENOS_API}?id_receta=${recetaId}`);
+      const datos = await respuesta.json();
+      return datos.alergenos || [];
+    } catch (error) {
+      console.error(`Error cargando alérgenos para receta ${recetaId}:`, error);
+      return [];
+    }
+  };
+
+  const cargarTodosLosAlergenos = async () => {
+    try {
+      const respuesta = await fetch(`${ALERGENOS_API}?todos=true`);
+      const datos = await respuesta.json();
+      setTodosLosAlergenos(datos.alergenos || []);
+    } catch (error) {
+      console.error("Error cargando lista de alérgenos:", error);
+    }
+  };
+
   useEffect(() => {
     cargarDatos();
+    cargarTodosLosAlergenos();
   }, []);
 
   const seleccionarImagen = async () => {
@@ -79,11 +120,14 @@ export default function RecetasScreen() {
     }
   };
 
-  const abrirEditor = (receta: Receta) => {
-    setRecetaSeleccionada(receta); 
+  const abrirEditor = async (receta: Receta) => {
+    setRecetaSeleccionada(receta);
     setEditNombre(receta.nombre);
     setEditDescripcion(receta.descripcion);
     setEditEstado(receta.estado);
+    
+    const alergenos = await cargarAlergenosReceta(receta.id);
+    setAlergenosSeleccionados(alergenos.map(a => a.id));
   };
 
   const prepararFormData = () => {
@@ -97,11 +141,14 @@ export default function RecetasScreen() {
       if (recetaSeleccionada.imagen.startsWith('file') || recetaSeleccionada.imagen.startsWith('content')) {
         formData.append('foto_receta', {
           uri: recetaSeleccionada.imagen,
-          name: 'imagen_receta.jpg', 
+          name: 'imagen_receta.jpg',
           type: 'image/jpeg',
         } as any);
       }
     }
+
+    formData.append('alergenos', JSON.stringify(alergenosSeleccionados));
+
     return formData;
   };
 
@@ -119,7 +166,9 @@ export default function RecetasScreen() {
       if (respuesta.ok) {
         Alert.alert("Éxito", "Receta actualizada");
         setRecetaSeleccionada(null);
-        cargarDatos(); 
+        cargarDatos();
+      } else {
+        Alert.alert("Error", "No se pudo actualizar la receta");
       }
     } catch (error) {
       Alert.alert("Error", "Error de conexión");
@@ -148,6 +197,9 @@ export default function RecetasScreen() {
       if (respuesta.ok) {
         Alert.alert("Éxito", "Receta creada correctamente");
         setRecetaSeleccionada(null);
+        setEditNombre('');
+        setEditDescripcion('');
+        setAlergenosSeleccionados([]);
         cargarDatos();
       } else {
         Alert.alert("Error del servidor", resultado.error || "No se pudo crear");
@@ -160,31 +212,61 @@ export default function RecetasScreen() {
     }
   };
 
+  const toggleAlergeno = (alergenoId: number) => {
+    setAlergenosSeleccionados(prev =>
+      prev.includes(alergenoId)
+        ? prev.filter(id => id !== alergenoId)
+        : [...prev, alergenoId]
+    );
+  };
+
   const renderItem = ({ item }: { item: Receta }) => {
-    // Construimos la URL: si ya es una URL completa la dejamos, si no, añadimos el prefijo del servidor
-    const uriImagen = item.imagen 
+    const uriImagen = item.imagen && item.imagen.trim() !== ''
       ? (item.imagen.startsWith('http') ? item.imagen : `${ASSETS_URL}/${item.imagen}`)
       : null;
 
     return (
-      <View style={styles.card}>
-        {uriImagen && (
-          <Image 
-            source={{ uri: uriImagen }} 
-            style={{ width: '100%', height: 200, borderTopLeftRadius: 12, borderTopRightRadius: 12 }} 
+      <View style={[styles.card, { backgroundColor: currentColors.card }]}>
+        {uriImagen ? (
+          <Image
+            source={{ uri: uriImagen }}
+            style={styles.cardImage}
             resizeMode="cover"
           />
+        ) : (
+          <View style={[styles.cardImageBlank, { backgroundColor: currentColors.card }]} />
         )}
         <View style={styles.cardContent}>
-          <Text style={styles.nombre}>{item.nombre}</Text>
-          <Text style={styles.descripcion}>{item.descripcion}</Text>
+          <Text style={[styles.nombre, { color: currentColors.text }]}>{item.nombre}</Text>
+          <Text style={[styles.descripcion, { color: currentColors.text }]} numberOfLines={2}>{item.descripcion}</Text>
+
+          {item.alergenos && item.alergenos.length > 0 ? (
+            <View style={[styles.alergenosContainer, { borderBottomColor: currentColors.border }]}>
+              <Text style={styles.alergenosLabel}>Contiene:</Text>
+              <View style={styles.alergenos}>
+                {item.alergenos.map(alergeno => (
+                  <View key={alergeno.id} style={styles.alergenoBadge}>
+                    <Text style={styles.alergenitoText}>{alergeno.nombre}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : (
+            <View style={[styles.sinAlergenos, { borderBottomColor: currentColors.border }]}>
+              <Text style={styles.sinAlergenosText}>Sin alérgenos comunes</Text>
+            </View>
+          )}
+
           <View style={styles.footer}>
             <View>
-              <Text style={styles.footerText}>{item.fecha}</Text>
-              <Text style={styles.footerText}>{item.firma}</Text>
+              <Text style={[styles.footerText, { color: currentColors.border }]}>{item.fecha}</Text>
+              <Text style={[styles.footerText, { color: currentColors.border }]}>Por: {item.firma}</Text>
             </View>
-            <TouchableOpacity onPress={() => abrirEditor(item)}>
-              <Text style={{ color: '#007AFF', fontSize: 14, fontWeight: '600' }}>Editar</Text>
+            <TouchableOpacity 
+              style={styles.btnEditar}
+              onPress={() => abrirEditor(item)}
+            >
+              <Text style={styles.btnEditarText}>Editar</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -193,23 +275,42 @@ export default function RecetasScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      <View style={styles.headerPrincipal}>
-        <Text style={styles.tituloApp}>Recetas Busan</Text>
-        <TouchableOpacity onPress={() => {
-          setEditNombre('');
-          setEditDescripcion('');
-          setEditEstado(1);
-          setRecetaSeleccionada({ id: 0, estado: 1, nombre: '', descripcion: '', fecha: new Date().toISOString(), imagen: '', firma: '', orden: 0 });
-        }}>
-          <Text style={{ color: '#007AFF', fontSize: 16 }}>Nueva Receta</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
+      
+      <View style={[styles.headerPrincipal, { backgroundColor: currentColors.card, borderBottomColor: currentColors.border }]}>
+        <Text style={[styles.tituloApp, { color: currentColors.text }]}>Recetas Busan</Text>
+        <TouchableOpacity 
+          style={styles.btnNueva}
+          onPress={() => {
+            setEditNombre('');
+            setEditDescripcion('');
+            setEditEstado(1);
+            setAlergenosSeleccionados([]);
+            setRecetaSeleccionada({ 
+              id: 0, 
+              estado: 1, 
+              nombre: '', 
+              descripcion: '', 
+              fecha: new Date().toISOString(), 
+              imagen: '', 
+              firma: '', 
+              orden: 0 
+            });
+          }}
+        >
+          <Text style={styles.btnNuevaText}>Nueva</Text>
         </TouchableOpacity>
       </View>
 
       {cargando ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={{ marginTop: 10, color: currentColors.text }}>Cargando recetas...</Text>
+        </View>
+      ) : recetas.length === 0 ? (
+        <View style={styles.center}>
+          <Text style={{ fontSize: 18, color: currentColors.border }}>No hay recetas aún</Text>
         </View>
       ) : (
         <FlatList
@@ -221,48 +322,114 @@ export default function RecetasScreen() {
       )}
 
       <Modal visible={recetaSeleccionada !== null} animationType="slide" presentationStyle="pageSheet">
-        <SafeAreaView style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>{recetaSeleccionada?.id === 0 ? 'Nueva Receta' : 'Editar Receta'}</Text>
+        <SafeAreaView style={[styles.modalContent, { backgroundColor: currentColors.background }]}>
+          <View style={[styles.modalHeader, { backgroundColor: currentColors.card, borderBottomColor: currentColors.border }]}>
+            <Text style={[styles.modalTitle, { color: currentColors.text }]}>
+              {recetaSeleccionada?.id === 0 ? 'Nueva Receta' : 'Editar Receta'}
+            </Text>
             <TouchableOpacity onPress={() => setRecetaSeleccionada(null)}>
-              <Text style={styles.closeText}>Cancelar</Text>
+              <Text style={styles.closeText}>X</Text>
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={{ padding: 20 }}>
-            <Text style={styles.label}>Nombre de la Receta</Text>
-            <TextInput style={styles.input} value={editNombre} onChangeText={setEditNombre} placeholder="Ej. Paella" />
+          <ScrollView style={styles.scrollContent}>
+            <Text style={[styles.label, { color: currentColors.text }]}>Nombre de la Receta</Text>
+            <TextInput 
+              style={[styles.input, { backgroundColor: currentColors.card, color: currentColors.text, borderColor: currentColors.border }]} 
+              value={editNombre} 
+              onChangeText={setEditNombre} 
+              placeholder="Ej. Paella"
+              placeholderTextColor={currentColors.border}
+            />
 
-            <Text style={styles.label}>Descripción / Instrucciones</Text>
-            <TextInput style={[styles.input, styles.textArea]} value={editDescripcion} onChangeText={setEditDescripcion} multiline placeholder="Escribe aquí los pasos..." />
+            <Text style={[styles.label, { color: currentColors.text }]}>Descripción / Instrucciones</Text>
+            <TextInput 
+              style={[styles.input, styles.textArea, { backgroundColor: currentColors.card, color: currentColors.text, borderColor: currentColors.border }]} 
+              value={editDescripcion} 
+              onChangeText={setEditDescripcion} 
+              multiline 
+              placeholder="Escribe aquí los pasos..."
+              placeholderTextColor={currentColors.border}
+            />
 
-            <Text style={styles.label}>Imagen de la Receta</Text>
-            <TouchableOpacity style={styles.imageBox} onPress={seleccionarImagen}>
+            <Text style={[styles.label, { color: currentColors.text }]}>Imagen de la Receta</Text>
+            <TouchableOpacity style={[styles.imageBox, { backgroundColor: isDarkMode ? '#2a2a3a' : '#f9f9ff', borderColor: '#007AFF' }]} onPress={seleccionarImagen}>
               {recetaSeleccionada?.imagen ? (
-                <Image 
-                  source={{ 
+                <Image
+                  source={{
                     uri: recetaSeleccionada.imagen.startsWith('file') || recetaSeleccionada.imagen.startsWith('content')
-                      ? recetaSeleccionada.imagen 
+                      ? recetaSeleccionada.imagen
                       : `${ASSETS_URL}/${recetaSeleccionada.imagen}`
-                  }} 
-                  style={styles.imagePreview} 
+                  }}
+                  style={styles.imagePreview}
                 />
               ) : (
                 <View style={{ alignItems: 'center' }}>
-                  <Text style={{ color: '#007AFF' }}>Seleccionar Foto de Galería</Text>
+                  <Text style={{ fontSize: 30, color: currentColors.text }}>Seleccionar Foto</Text>
                 </View>
               )}
             </TouchableOpacity>
 
-            <Text style={styles.label}>Estado (1 Activo, 0 Inactivo)</Text>
-            <TextInput style={styles.input} value={editEstado.toString()} onChangeText={(t) => setEditEstado(parseInt(t) || 0)} keyboardType="numeric" />
-        
-            <TouchableOpacity 
+            <Text style={[styles.label, { color: currentColors.text }]}>Alérgenos</Text>
+            {todosLosAlergenos.length === 0 ? (
+              <Text style={{ color: '#e80000', padding: 10 }}>Cargando alérgenos...</Text>
+            ) : (
+              <View style={[styles.alergenosSelector, { backgroundColor: currentColors.card }]}>
+                {todosLosAlergenos.map(alergeno => (
+                  <TouchableOpacity
+                    key={alergeno.id}
+                    style={[
+                      styles.alergenoCheckbox,
+                      { backgroundColor: currentColors.card, borderColor: currentColors.border },
+                      alergenosSeleccionados.includes(alergeno.id) && styles.alergenoCheckboxSelected
+                    ]}
+                    onPress={() => toggleAlergeno(alergeno.id)}
+                  >
+                    <Text style={[
+                      styles.alergenoCheckboxText,
+                      { color: currentColors.text },
+                      alergenosSeleccionados.includes(alergeno.id) && styles.alergenoCheckboxTextSelected
+                    ]}>
+                      {alergenosSeleccionados.includes(alergeno.id) ? 'X ' : ''}
+                      {alergeno.nombre}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            <Text style={[styles.label, { color: currentColors.text }]}>Estado</Text>
+            <View style={styles.estadoContainer}>
+              <TouchableOpacity 
+                style={[styles.estadoBtn, { backgroundColor: currentColors.card, borderColor: currentColors.border }, editEstado === 1 && styles.estadoBtnActive]}
+                onPress={() => setEditEstado(1)}
+              >
+                <Text style={[styles.estadoBtnText, { color: currentColors.text }, editEstado === 1 && styles.estadoBtnTextActive]}>
+                  Activo
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.estadoBtn, { backgroundColor: currentColors.card, borderColor: currentColors.border }, editEstado === 0 && styles.estadoBtnActive]}
+                onPress={() => setEditEstado(0)}
+              >
+                <Text style={[styles.estadoBtnText, { color: currentColors.text }, editEstado === 0 && styles.estadoBtnTextActive]}>
+                  Inactivo
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
               style={[styles.btnGuardar, guardando && { opacity: 0.7 }]}
               onPress={() => recetaSeleccionada?.id === 0 ? nuevaReceta() : guardarCambios()}
               disabled={guardando}
             >
-              {guardando ? <ActivityIndicator color="#f6f6f6" /> : <Text style={styles.btnGuardarText}>{recetaSeleccionada?.id === 0 ? 'Crear Receta' : 'Guardar Cambios'}</Text>}
+              {guardando ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <Text style={styles.btnGuardarText}>
+                  {recetaSeleccionada?.id === 0 ? 'Crear Receta' : 'Guardar Cambios'}
+                </Text>
+              )}
             </TouchableOpacity>
           </ScrollView>
         </SafeAreaView>
@@ -272,26 +439,247 @@ export default function RecetasScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F2F2F7' },
-  headerPrincipal: { padding: 20, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#DDD', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  tituloApp: { fontSize: 26, fontWeight: 'bold', color: '#000' },
-  listContainer: { padding: 15 },
-  card: { backgroundColor: '#FFF', borderRadius: 12, marginBottom: 20, elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
-  cardContent: { padding: 15 },
-  nombre: { fontSize: 18, fontWeight: 'bold', color: '#1C1C1E', marginBottom: 5 },
-  descripcion: { fontSize: 14, color: '#3A3A3C', marginBottom: 15, lineHeight: 20 },
-  footer: { flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: '#F2F2F7', paddingTop: 10 },
-  footerText: { fontSize: 12, color: '#8E8E93' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  modalContent: { flex: 1, backgroundColor: '#FFF' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#EEE' },
-  modalTitle: { fontSize: 20, fontWeight: 'bold' },
-  closeText: { color: '#FF3B30', fontSize: 16 },
-  label: { fontSize: 14, fontWeight: '600', color: '#8E8E93', marginBottom: 8, marginTop: 15 },
-  input: { backgroundColor: '#F2F2F7', borderRadius: 10, padding: 15, fontSize: 16, color: '#000' },
-  textArea: { height: 100, textAlignVertical: 'top' },
-  imageBox: { height: 150, backgroundColor: '#F2F2F7', borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginTop: 5, overflow: 'hidden', borderStyle: 'dashed', borderWidth: 1, borderColor: '#007AFF' },
-  imagePreview: { width: '100%', height: '100%' },
-  btnGuardar: { backgroundColor: '#007AFF', padding: 18, borderRadius: 12, alignItems: 'center', marginTop: 30, marginBottom: 50 },
-  btnGuardarText: { color: '#FFF', fontSize: 18, fontWeight: 'bold' }
+  container: { 
+    flex: 1,
+  },
+  headerPrincipal: { 
+    padding: 20, 
+    borderBottomWidth: 1, 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2
+  },
+  tituloApp: { 
+    fontSize: 26, 
+    fontWeight: 'bold',
+  },
+  btnNueva: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8
+  },
+  btnNuevaText: {
+    color: '#FFF',
+    fontWeight: '600',
+    fontSize: 14
+  },
+  listContainer: { 
+    padding: 15,
+    paddingBottom: 30
+  },
+  card: { 
+    borderRadius: 12, 
+    marginBottom: 20, 
+    overflow: 'hidden',
+    elevation: 3, 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 2 }, 
+    shadowOpacity: 0.1, 
+    shadowRadius: 4 
+  },
+  cardImage: {
+    width: '100%',
+    height: 200,
+  },
+  cardImageBlank: {
+    width: '100%',
+    height: 200,
+  },
+  cardContent: { 
+    padding: 15 
+  },
+  nombre: { 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    marginBottom: 8 
+  },
+  descripcion: { 
+    fontSize: 14, 
+    marginBottom: 12, 
+    lineHeight: 20 
+  },
+  alergenosContainer: { 
+    marginBottom: 12, 
+    paddingBottom: 12, 
+    borderBottomWidth: 1,
+  },
+  alergenosLabel: { 
+    fontSize: 12, 
+    fontWeight: '700', 
+    color: '#FF3B30', 
+    marginBottom: 8 
+  },
+  alergenos: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    gap: 8 
+  },
+  alergenoBadge: { 
+    backgroundColor: '#FFE5E5', 
+    paddingHorizontal: 12, 
+    paddingVertical: 6, 
+    borderRadius: 16, 
+    borderWidth: 1, 
+    borderColor: '#FF3B30' 
+  },
+  alergenitoText: { 
+    fontSize: 12, 
+    color: '#FF3B30', 
+    fontWeight: '600' 
+  },
+  sinAlergenos: {
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+  },
+  sinAlergenosText: {
+    fontSize: 12,
+    color: '#34C759',
+    fontWeight: '600'
+  },
+  footer: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+    paddingTop: 10 
+  },
+  footerText: { 
+    fontSize: 12,
+    marginBottom: 2
+  },
+  btnEditar: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6
+  },
+  btnEditarText: {
+    color: '#FFF',
+    fontWeight: '600',
+    fontSize: 13
+  },
+  center: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  modalContent: { 
+    flex: 1,
+  },
+  modalHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    padding: 20, 
+    borderBottomWidth: 1,
+  },
+  modalTitle: { 
+    fontSize: 20, 
+    fontWeight: 'bold',
+  },
+  closeText: { 
+    color: '#FF3B30', 
+    fontSize: 24,
+    fontWeight: '300'
+  },
+  scrollContent: {
+    padding: 20
+  },
+  label: { 
+    fontSize: 14, 
+    fontWeight: '600', 
+    marginBottom: 10, 
+    marginTop: 18 
+  },
+  input: { 
+    borderRadius: 10, 
+    padding: 15, 
+    fontSize: 16,
+    borderWidth: 1,
+  },
+  textArea: { 
+    height: 120, 
+    textAlignVertical: 'top' 
+  },
+  imageBox: { 
+    height: 150, 
+    borderRadius: 10, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    marginTop: 5, 
+    overflow: 'hidden', 
+    borderStyle: 'dashed', 
+    borderWidth: 2, 
+  },
+  imagePreview: { 
+    width: '100%', 
+    height: '100%',
+    resizeMode: 'cover'
+  },
+  alergenosSelector: { 
+    borderRadius: 10, 
+    padding: 10, 
+    marginTop: 5 
+  },
+  alergenoCheckbox: { 
+    paddingVertical: 12, 
+    paddingHorizontal: 14, 
+    marginVertical: 6, 
+    borderRadius: 8, 
+    borderWidth: 1,
+  },
+  alergenoCheckboxSelected: { 
+    backgroundColor: '#FFE5E5', 
+    borderColor: '#FF3B30' 
+  },
+  alergenoCheckboxText: { 
+    fontSize: 14,
+    fontWeight: '500'
+  },
+  alergenoCheckboxTextSelected: { 
+    color: '#FF3B30', 
+    fontWeight: '700' 
+  },
+  estadoContainer: {
+    flexDirection: 'row',
+    gap: 10
+  },
+  estadoBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center'
+  },
+  estadoBtnActive: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF'
+  },
+  estadoBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  estadoBtnTextActive: {
+    color: '#FFF'
+  },
+  btnGuardar: { 
+    backgroundColor: '#007AFF', 
+    padding: 18, 
+    borderRadius: 12, 
+    alignItems: 'center', 
+    marginTop: 30, 
+    marginBottom: 50 
+  },
+  btnGuardarText: { 
+    color: '#FFF', 
+    fontSize: 18, 
+    fontWeight: 'bold' 
+  }
 });

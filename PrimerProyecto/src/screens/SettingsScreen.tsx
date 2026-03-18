@@ -1,4 +1,3 @@
-import { DarkTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -13,143 +12,186 @@ import {
   View
 } from 'react-native';
 import FeatherIcon from 'react-native-vector-icons/Feather';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '../app/ThemeContext';
+import { colors } from '../app/colors';
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { isDarkMode, toggleTheme } = useTheme();
+  const currentColors = isDarkMode ? colors.dark : colors.light;
+  
   const [usuario, setUsuario] = useState<any>(null);
   const [form, setForm] = useState({
     emailNotifications: true,
     pushNotifications: false,
-    DarkTheme: false,
+    DarkTheme: isDarkMode,
   });
 
-  // IP de tu servidor
-  const BASE_URL =`https://busan.dvpla.com`; 
-
+  const BASE_URL = `https://busan.dvpla.com`;
 
   useEffect(() => {
-    fetch(`${BASE_URL}/api/usuarios/perfil-actual`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) setUsuario(data);
-      })
-      .catch(err => console.log("Error cargando perfil:", err));
-  }, []);
+    cargarUsuario();
+    // Sincronizar el estado del switch con el tema actual
+    setForm(prev => ({ ...prev, DarkTheme: isDarkMode }));
+  }, [isDarkMode]);
+
+  const cargarUsuario = async () => {
+    try {
+      const idUsuario = await AsyncStorage.getItem('id_usuario');
+      const nombreUsuario = await AsyncStorage.getItem('usuario');
+      const imagenUsuario = await AsyncStorage.getItem('imagen');
+
+      if (idUsuario && nombreUsuario) {
+        setUsuario({
+          id: idUsuario,
+          nombre: nombreUsuario,
+          imagen: imagenUsuario || '/assets/default.jpg'
+        });
+      } else {
+        console.log("No hay usuario en AsyncStorage");
+      }
+    } catch (err) {
+      console.log("Error cargando perfil:", err);
+    }
+  };
 
   const manejarLogout = () => {
     Alert.alert("Cerrar Sesión", "¿Estás seguro?", [
       { text: "Cancelar", style: "cancel" },
-      { text: "Sí, salir", onPress: () => router.replace('/') }
+      {
+        text: "Sí, salir",
+        onPress: async () => {
+          await AsyncStorage.removeItem('id_usuario');
+          await AsyncStorage.removeItem('usuario');
+          await AsyncStorage.removeItem('imagen');
+          router.replace('/');
+        }
+      }
     ]);
   };
-const DarkMode=()=>{
-  if(form.DarkTheme){
-    localStorage.setItem('theme', 'dark');
-    if(localStorage.getItem('theme') === 'dark'){
-        console.log('Tema oscuro activado');
-    }
-  }
-  }
+
   // Construir URL de la imagen
-  const imageUri = usuario?.imagen 
-    ? (usuario.imagen.startsWith('http') ? usuario.imagen : `${BASE_URL}${usuario.imagen}`)
+  const imageUri = usuario?.imagen
+    ? (usuario.imagen.startsWith('http')
+      ? usuario.imagen
+      : `${BASE_URL}${usuario.imagen.startsWith('/') ? '' : '/'}${usuario.imagen}`)
     : 'https://via.placeholder.com/150';
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#ffffff' }}>
-      <View style={styles.header}>
-        <View style={styles.headerAction}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <FeatherIcon color="#000" name="arrow-left" size={24} />
-          </TouchableOpacity>
-        </View>
-
-        <Text numberOfLines={1} style={styles.headerTitle}>
-          Ajustes
-        </Text>
-
-        <View style={[styles.headerAction, { alignItems: 'flex-end' }]}>
-          <TouchableOpacity>
-            <FeatherIcon color="#000" name="more-vertical" size={24} />
-          </TouchableOpacity>
-        </View>
-      </View>
+    <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
+      
 
       <ScrollView contentContainerStyle={styles.content}>
+        {/* SECCIÓN CUENTA */}
         <View style={[styles.section, { paddingTop: 4 }]}>
-          <Text style={styles.sectionTitle}>Cuenta</Text>
+          <Text style={[styles.sectionTitle, { color: currentColors.text }]}>
+            Cuenta
+          </Text>
 
-          <View style={styles.sectionBody}>
+          <View style={[styles.sectionBody, { backgroundColor: currentColors.card }]}>
             <TouchableOpacity style={styles.profile}>
               <Image
                 source={{ uri: imageUri }}
-                style={styles.profileAvatar} 
+                style={styles.profileAvatar}
+                onError={() => console.log("Error cargando imagen")}
               />
 
               <View style={styles.profileBody}>
-                <Text style={styles.profileName}>
+                <Text style={[styles.profileName, { color: currentColors.text }]}>
                   {usuario ? usuario.nombre : 'Cargando...'}
                 </Text>
-                <Text style={styles.profileHandle}>Perfil de usuario</Text>
+                <Text style={[styles.profileHandle, { color: currentColors.border }]}>
+                  Perfil de usuario
+                </Text>
               </View>
 
-              <FeatherIcon color="#bcbcbc" name="chevron-right" size={22} />
+              <FeatherIcon color={currentColors.border} name="chevron-right" size={22} />
             </TouchableOpacity>
           </View>
         </View>
 
+        {/* SECCIÓN PREFERENCIAS */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preferencias</Text>
+          <Text style={[styles.sectionTitle, { color: currentColors.text }]}>
+            Preferencias
+          </Text>
 
-          <View style={styles.sectionBody}>
-            <View style={[styles.rowWrapper, styles.rowFirst]}>
+          <View style={[styles.sectionBody, { backgroundColor: currentColors.card }]}>
+            {/* Idioma */}
+            <View style={[styles.rowWrapper, styles.rowFirst, { borderTopColor: currentColors.border }]}>
               <TouchableOpacity style={styles.row}>
-                <Text style={styles.rowLabel}>Idioma</Text>
+                <Text style={[styles.rowLabel, { color: currentColors.text }]}>
+                  Idioma
+                </Text>
                 <View style={styles.rowSpacer} />
-                <Text style={styles.rowValue}>Español</Text>
-                <FeatherIcon color="#bcbcbc" name="chevron-right" size={19} />
+                <Text style={[styles.rowValue, { color: currentColors.border }]}>
+                  Español
+                </Text>
+                <FeatherIcon color={currentColors.border} name="chevron-right" size={19} />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.rowWrapper}>
+            {/* Notificaciones Email */}
+            <View style={[styles.rowWrapper, { borderTopColor: currentColors.border }]}>
               <View style={styles.row}>
-                <Text style={styles.rowLabel}>Notificaciones Email</Text>
+                <Text style={[styles.rowLabel, { color: currentColors.text }]}>
+                  Notificaciones Email
+                </Text>
                 <View style={styles.rowSpacer} />
                 <Switch
-                  onValueChange={emailNotifications => setForm({ ...form, emailNotifications })}
-                  value={form.emailNotifications} 
+                  onValueChange={emailNotifications => 
+                    setForm({ ...form, emailNotifications })
+                  }
+                  value={form.emailNotifications}
+                  trackColor={{ false: '#767577', true: '#81c784' }}
+                  thumbColor={form.emailNotifications ? '#4caf50' : '#f4f3f4'}
                 />
               </View>
             </View>
 
-            <View style={[styles.rowWrapper, styles.rowLast]}>
+            {/* Notificaciones Push */}
+            <View style={[styles.rowWrapper, { borderTopColor: currentColors.border }]}>
               <View style={styles.row}>
-                <Text style={styles.rowLabel}>Notificaciones Push</Text>
+                <Text style={[styles.rowLabel, { color: currentColors.text }]}>
+                  Notificaciones Push
+                </Text>
                 <View style={styles.rowSpacer} />
                 <Switch
-                  onValueChange={pushNotifications => setForm({ ...form, pushNotifications })}
-                  value={form.pushNotifications} 
+                  onValueChange={pushNotifications => 
+                    setForm({ ...form, pushNotifications })
+                  }
+                  value={form.pushNotifications}
+                  trackColor={{ false: '#767577', true: '#81c784' }}
+                  thumbColor={form.pushNotifications ? '#4caf50' : '#f4f3f4'}
                 />
               </View>
             </View>
-            <View style={styles.rowWrapper}>
-                <TouchableOpacity style={styles.row}>
-                    <Text style={styles.rowLabel}>Tema Oscuro</Text>
-                    <View style={styles.rowSpacer} />
-                    <Switch
-                        onValueChange={isDarkMode => setForm({ ...form, DarkTheme: isDarkMode })}
-                        value={form.DarkTheme} 
-                    />
-                    
-                </TouchableOpacity>
 
+            {/* Tema Oscuro */}
+            <View style={[styles.rowWrapper, styles.rowLast, { borderTopColor: currentColors.border }]}>
+              <View style={styles.row}>
+                <Text style={[styles.rowLabel, { color: currentColors.text }]}>
+                  Tema Oscuro
+                </Text>
+                <View style={styles.rowSpacer} />
+                <Switch
+                  onValueChange={(isDark) => {
+                    setForm({ ...form, DarkTheme: isDark });
+                    toggleTheme(isDark);
+                  }}
+                  value={form.DarkTheme}
+                  trackColor={{ false: '#767577', true: '#81c784' }}
+                  thumbColor={form.DarkTheme ? '#4caf50' : '#f4f3f4'}
+                />
+              </View>
             </View>
           </View>
-
         </View>
 
+        {/* SECCIÓN LOGOUT */}
         <View style={styles.section}>
-          <View style={styles.sectionBody}>
+          <View style={[styles.sectionBody, { backgroundColor: currentColors.card }]}>
             <View style={[styles.rowWrapper, styles.rowFirst, styles.rowLast, { alignItems: 'center' }]}>
               <TouchableOpacity onPress={manejarLogout} style={styles.row}>
                 <Text style={[styles.rowLabel, styles.rowLabelLogout]}>
@@ -160,33 +202,43 @@ const DarkMode=()=>{
           </View>
         </View>
 
-        <Text style={styles.contentFooter}>Ajustes</Text>
+        <Text style={[styles.contentFooter, { color: currentColors.border }]}>
+          Ajustes
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingHorizontal: 16, paddingVertical: 10 },
+  container: { flex: 1 },
+  header: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    width: '100%', 
+    paddingHorizontal: 16, 
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+  },
   headerAction: { width: 40, height: 40, justifyContent: 'center' },
-  headerTitle: { fontSize: 19, fontWeight: '600', color: '#000', flexGrow: 1, textAlign: 'center' },
-  DarkTheme: { backgroundColor: DarkTheme.colors.card },
+  headerTitle: { fontSize: 19, fontWeight: '600', flexGrow: 1, textAlign: 'center' },
   content: { paddingHorizontal: 16 },
-  contentFooter: { marginTop: 24, fontSize: 13, fontWeight: '500', textAlign: 'center', color: '#a69f9f' },
+  contentFooter: { marginTop: 24, fontSize: 13, fontWeight: '500', textAlign: 'center' },
   section: { paddingVertical: 12 },
-  sectionTitle: { margin: 8, marginLeft: 12, fontSize: 13, fontWeight: '500', color: '#a69f9f', textTransform: 'uppercase' },
-  sectionBody: { borderRadius: 12, backgroundColor: '#fff', overflow: 'hidden' },
+  sectionTitle: { margin: 8, marginLeft: 12, fontSize: 13, fontWeight: '500', textTransform: 'uppercase' },
+  sectionBody: { borderRadius: 12, overflow: 'hidden' },
   profile: { padding: 12, flexDirection: 'row', alignItems: 'center' },
   profileAvatar: { width: 60, height: 60, borderRadius: 9999, marginRight: 12 },
   profileBody: { marginRight: 'auto' },
-  profileName: { fontSize: 18, fontWeight: '600', color: '#292929' },
-  profileHandle: { marginTop: 2, fontSize: 14, color: '#858585' },
-  row: { height: 50, width: '100%', flexDirection: 'row', alignItems: 'center', paddingRight: 12 },
-  rowWrapper: { paddingLeft: 16, borderTopWidth: 1, borderColor: '#f0f0f0' },
+  profileName: { fontSize: 18, fontWeight: '600' },
+  profileHandle: { marginTop: 2, fontSize: 14 },
+  row: { height: 50, width: '100%', flexDirection: 'row', alignItems: 'center', paddingRight: 12, paddingLeft: 12 },
+  rowWrapper: { paddingLeft: 0, borderTopWidth: 1 },
   rowFirst: { borderTopWidth: 0 },
   rowLast: {},
-  rowLabel: { fontSize: 16, color: '#000' },
+  rowLabel: { fontSize: 16 },
   rowSpacer: { flex: 1 },
-  rowValue: { fontSize: 16, color: '#ababab', marginRight: 4 },
+  rowValue: { fontSize: 16, marginRight: 4 },
   rowLabelLogout: { width: '100%', textAlign: 'center', fontWeight: '600', color: '#dc2626' },
 });
