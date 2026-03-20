@@ -290,6 +290,15 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen 
+  name="calendario" 
+  options={{ 
+    title: "Calendario",
+    headerBackTitle: "Atrás",
+  }}
+  
+/>
+
+        <Stack.Screen 
           name="alumnos" 
           options={{ 
             title: "Alumnos",
