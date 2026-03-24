@@ -26,11 +26,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 const db = mysql.createConnection({
-  host: 'busan.dvpla.com',
-  port: 3306,
-  user: 'busan_formacion',
-  password: 'formacion',
-  database: 'busan_formacion'
+//.
 });
 
 db.connect(err => {
