@@ -48,10 +48,8 @@ const IniciarSesionScreen: React.FC<Props> = ({ navigation }) => {
           const idString = String(finalId);
           console.log('--- PROCESO DE GUARDADO ---');
           
-          // 1. Guardamos de forma asíncrona pero esperando el resultado
           await AsyncStorage.setItem('id_usuario', idString);
           
-          // 2. Verificamos que se guardó antes de saltar de pantalla
           const comprobacion = await AsyncStorage.getItem('id_usuario');
           console.log('ID en Storage tras guardar:', comprobacion);
 

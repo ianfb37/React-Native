@@ -46,7 +46,6 @@ export default function MesajeriaScreen() {
   const eventSourceRef = useRef<EventSource | null>(null);
   const ultimoIdRef = useRef<number>(0);
 
-  // 1. OBTENER MI ID Y CARGAR CONTACTOS
   useEffect(() => {
     const inicializar = async () => {
       try {
@@ -69,7 +68,6 @@ export default function MesajeriaScreen() {
     inicializar();
   }, []);
 
-  // 2. CARGAR HISTORIAL INICIAL
   useEffect(() => {
     if (chatActivo && miId) {
       const cargarHistorial = async () => {
@@ -94,7 +92,6 @@ export default function MesajeriaScreen() {
     }
   }, [chatActivo, miId]);
 
-  // 3. CONECTAR A SSE (Server-Sent Events)
   useEffect(() => {
     if (chatActivo && miId) {
       const conectarSSE = () => {
@@ -122,7 +119,6 @@ export default function MesajeriaScreen() {
           eventSourceRef.current.onerror = () => {
             console.log('SSE desconectado, reconectando...');
             eventSourceRef.current?.close();
-            // Reconectar después de 3 segundos
             setTimeout(conectarSSE, 3000);
           };
         } catch (e) {
@@ -140,7 +136,6 @@ export default function MesajeriaScreen() {
     }
   }, [chatActivo, miId]);
 
-  // 4. ENVIAR MENSAJE
   const enviar = () => {
     if (!texto.trim() || !chatActivo || !miId) return;
 
@@ -182,7 +177,6 @@ export default function MesajeriaScreen() {
     );
   }
 
-  // VISTA DE LISTA DE CONTACTOS
   if (!chatActivo) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
@@ -218,7 +212,6 @@ export default function MesajeriaScreen() {
     );
   }
 
-  // VISTA DEL CHAT
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: currentColors.background }]}>
       <View style={[styles.header, { backgroundColor: currentColors.card, borderBottomColor: currentColors.border }]}>

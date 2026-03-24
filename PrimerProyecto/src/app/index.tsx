@@ -40,14 +40,12 @@ const IniciarSesionScreen = () => {
       if (response.ok && data.success) {
         console.log('✅ Login OK:', data);
 
-        // --- PASO CRUCIAL PARA EL LAYOUT ---
-        // Guardamos el ID que devuelve tu PHP (asegúrate que tu PHP devuelva 'id')
+        
         if (data.id) {
           await AsyncStorage.setItem('id_usuario', String(data.id));
           console.log('ID guardado correctamente');
         }
-        // ------------------------------------
-
+        
         router.replace('/botones'); 
       } else {
         Alert.alert('Error', data.error || 'Usuario o contraseña incorrectos');
